@@ -1,0 +1,1033 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>HR Dashboard — AKANE</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Segoe UI',Arial,sans-serif;background:#fffdf0;color:#2c2c2c;font-size:13px}
+/* topbar */
+.topbar{background:#1F4E79;color:#fff;padding:10px 20px;display:flex;justify-content:space-between;align-items:center}
+.topbar h1{font-size:15px;font-weight:700}
+.topbar small{font-size:11px;opacity:.75}
+/* nav tabs */
+.nav-tabs{display:flex;background:#f5e6a0;border-bottom:2px solid #c8a800;overflow-x:auto}
+.nav-tab{padding:10px 20px;cursor:pointer;font-size:13px;font-weight:600;color:#7a6000;white-space:nowrap;border-bottom:3px solid transparent;transition:.15s}
+.nav-tab.on{color:#1F4E79;border-bottom:3px solid #1F4E79;background:#fff}
+/* pages */
+.page{display:none;padding:16px;max-width:1000px;margin:0 auto}
+.page.on{display:block}
+/* cards */
+.gold-card{background:#fffbe6;border:1.5px solid #c8a800;border-radius:8px;overflow:hidden;margin-bottom:14px}
+.gold-card .gc-title{background:#f5e6a0;padding:8px 14px;font-weight:700;color:#5a3e00;font-size:13px;border-bottom:1px solid #c8a800}
+.gold-card .gc-body{padding:12px 14px}
+/* kpi row */
+.kpi-row{display:grid;grid-template-columns:repeat(6,1fr);gap:8px;margin-bottom:14px}
+.kpi{background:#fffbe6;border:1.5px solid #c8a800;border-radius:8px;padding:10px 12px;text-align:center}
+.kpi .kl{font-size:10px;color:#7a6000;font-weight:600;margin-bottom:4px}
+.kpi .kv{font-size:22px;font-weight:700}
+.kblue .kv{color:#1F4E79}.kgreen .kv{color:#15803d}.kred .kv{color:#b91c1c}
+.kamber .kv{color:#b45309}.kpurple .kv{color:#6d28d9}.kgray .kv{color:#4b5563}
+/* 2-col grid */
+.g2{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:14px}
+.g3{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:14px}
+/* tables */
+.htbl{width:100%;border-collapse:collapse;font-size:12px}
+.htbl th{padding:6px 10px;border:1px solid #c8a800;background:#f5e6a0;color:#5a3e00;text-align:center;white-space:nowrap}
+.htbl td{padding:6px 10px;border:1px solid #e8d080;text-align:center;color:#2c2c2c}
+.htbl tr:nth-child(even) td{background:#fffff5}
+.htbl tr:nth-child(odd) td{background:#fffbe6}
+/* date header */
+.date-hdr{background:#f5e6a0;border:1.5px solid #c8a800;border-radius:6px;text-align:center;padding:9px;font-size:15px;font-weight:700;color:#5a3e00;margin-bottom:12px}
+/* badges */
+.bdg{display:inline-block;border-radius:4px;font-size:11px;font-weight:700;padding:2px 7px}
+.bdg-r{background:#fee2e2;color:#b91c1c}.bdg-a{background:#fef3c7;color:#b45309}
+.bdg-g{background:#dcfce7;color:#15803d}.bdg-b{background:#dbeafe;color:#1e40af}
+.bdg-p{background:#ede9fe;color:#6d28d9}.bdg-n{background:#f1f5f9;color:#64748b}.bdg-late{background:#fef3c7;color:#92400e;border:1.5px solid #f59e0b}.bdg-late{background:#fef3c7;color:#92400e;border:1px solid #f59e0b}
+/* import */
+.imp-box{background:#fffbe6;border:1.5px dashed #c8a800;border-radius:8px;padding:14px;margin-bottom:14px}
+.imp-box h3{color:#5a3e00;font-size:13px;font-weight:700;margin-bottom:6px}
+.imp-box p{font-size:11px;color:#7a6000;margin-bottom:8px;line-height:1.6}
+textarea{width:100%;height:90px;border:1px solid #c8a800;border-radius:6px;padding:7px;font-size:11px;font-family:monospace;resize:vertical;outline:none;background:#fffff5}
+.brow{display:flex;gap:8px;margin-top:8px;flex-wrap:wrap;align-items:center}
+button{padding:6px 14px;border-radius:5px;border:1.5px solid #c8a800;cursor:pointer;font-size:12px;font-weight:700;background:#f5e6a0;color:#5a3e00}
+button:hover{background:#edcc00}
+.bd{border-color:#e57373;background:#ffeaea;color:#b71c1c}.bd:hover{background:#ffcdd2}
+.bmini{padding:4px 10px;font-size:11px}
+.msg{font-size:11px;margin-top:6px;padding:6px 10px;border-radius:5px;display:none}
+.msgok{background:#e8f5e9;color:#2e7d32}.msger{background:#fdecea;color:#b71c1c}
+/* selects */
+select{padding:4px 8px;border-radius:5px;border:1.5px solid #c8a800;background:#fffbe6;font-size:11px;color:#5a3e00;outline:none;cursor:pointer}
+/* chart wrap */
+.cw{position:relative;width:100%}
+/* status indicator */
+.sync-status{font-size:11px;color:#7a6000;margin-left:auto}
+.sync-ok{color:#15803d}.sync-er{color:#b91c1c}.sync-ld{color:#b45309}
+/* person list */
+.prow{display:flex;justify-content:space-between;align-items:center;padding:5px 0;border-bottom:1px solid #f0e8a0;font-size:12px}
+.prow:last-child{border:none}
+.pname{font-weight:700;color:#2c2c2c}.pdept{font-size:10px;color:#7a6000;margin-left:4px}
+/* day nav */
+.day-nav{display:flex;gap:6px;align-items:center;margin-bottom:10px;flex-wrap:wrap}
+/* empty */
+.empty{text-align:center;color:#7a6000;font-size:12px;padding:16px}
+/* url input */
+.url-box{background:#e8f0fe;border:1px solid #93c5fd;border-radius:6px;padding:10px 14px;margin-bottom:14px;font-size:12px;color:#1e40af}
+.url-box input{width:100%;margin-top:6px;padding:6px 10px;border:1px solid #93c5fd;border-radius:5px;font-size:12px;outline:none;background:#fff}
+@media(max-width:640px){.kpi-row{grid-template-columns:repeat(3,1fr)}.g2,.g3{grid-template-columns:1fr}.nav-tab{padding:8px 12px;font-size:12px}}
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <h1>แดชบอร์ดการเข้างาน — AKANE</h1>
+  <span class="sync-status" id="syncStatus">⚡ โหมดชั่วคราว</span>
+</div>
+
+<!-- nav -->
+<div class="nav-tabs">
+  <div class="nav-tab on" data-p="pDaily">📅 รายวัน</div>
+  <div class="nav-tab" data-p="pTeam">🏢 รายทีม</div>
+  <div class="nav-tab" data-p="pWeekly">📆 รายสัปดาห์</div>
+  <div class="nav-tab" data-p="pMonthly">📊 รายเดือน</div>
+  <div class="nav-tab" data-p="pYearly">🗓️ ภาพรวมปี 2569</div>
+  <div class="nav-tab" data-p="pSettings">⚙️ ตั้งค่า</div>
+</div>
+
+<!-- ═══════════════ PAGE: รายวัน ═══════════════ -->
+<div class="page on" id="pDaily">
+  <div class="day-nav">
+    <select id="dayMonSel"></select>
+    <button class="bmini" id="btnPrev">◀</button>
+    <select id="daySelect"></select>
+    <button class="bmini" id="btnNext">▶</button>
+  </div>
+  <div class="date-hdr" id="dateHdr">—</div>
+  <div class="kpi-row">
+    <div class="kpi kblue"><div class="kl">พนักงานทั้งหมด</div><div class="kv" id="dTot">—</div></div>
+    <div class="kpi kgreen"><div class="kl">มาทำงาน</div><div class="kv" id="dCame">—</div></div>
+    <div class="kpi" style="background:#fef3c7;border-color:#f59e0b"><div class="kl" style="color:#92400e">มาสาย</div><div class="kv" id="dLate" style="color:#92400e">0</div></div>
+    <div class="kpi kred"><div class="kl">ลาป่วย</div><div class="kv" id="dSick">0</div></div>
+    <div class="kpi kamber"><div class="kl">ลากิจ</div><div class="kv" id="dBiz">0</div></div>
+    <div class="kpi kpurple"><div class="kl">ลาพักร้อน</div><div class="kv" id="dVac">0</div></div>
+    <div class="kpi kgray"><div class="kl">วันหยุด / อื่นๆ</div><div class="kv" id="dOff">0</div></div>
+  </div>
+  <div class="g2">
+    <div class="gold-card">
+      <div class="gc-title">พนักงานลางาน</div>
+      <div class="gc-body" id="leaveList"><div class="empty">ยังไม่มีข้อมูล</div></div>
+    </div>
+    <div class="gold-card">
+      <div class="gc-title">สัดส่วนการลาวันนี้</div>
+      <div class="gc-body"><div class="cw" style="height:200px"><canvas id="cDayDonut"></canvas></div></div>
+    </div>
+  </div>
+  <div class="gold-card">
+    <div class="gc-title">สถานะรายแผนก — วันนี้</div>
+    <div class="gc-body" style="overflow-x:auto"><table class="htbl" id="dayDeptTbl"></table></div>
+  </div>
+</div>
+
+<!-- ═══════════════ PAGE: รายทีม ═══════════════ -->
+<div class="page" id="pTeam">
+  <div class="brow" style="margin-bottom:12px">
+    <select id="tmMonSel"></select>
+    <select id="tmViewSel">
+      <option value="month">รายเดือน</option>
+      <option value="week">สัปดาห์ล่าสุด</option>
+      <option value="day">วันล่าสุด</option>
+    </select>
+    <select id="tmTeamSel"><option value="">ทุกทีม</option></select>
+  </div>
+  <div id="teamCards" class="g3" style="margin-bottom:14px"></div>
+  <div class="gold-card">
+    <div class="gc-title">ตารางสรุปรายทีม</div>
+    <div class="gc-body" style="overflow-x:auto"><table class="htbl" id="teamTbl"></table></div>
+  </div>
+  <div class="gold-card">
+    <div class="gc-title">กราฟเปรียบเทียบรายทีม</div>
+    <div class="gc-body"><div class="cw" style="height:220px"><canvas id="cTeamBar"></canvas></div></div>
+  </div>
+  <div class="gold-card">
+    <div class="gc-title">รายชื่อพนักงานในทีม</div>
+    <div class="gc-body" style="overflow-x:auto"><table class="htbl" id="teamPersonTbl"></table></div>
+  </div>
+</div>
+
+<!-- ═══════════════ PAGE: รายสัปดาห์ ═══════════════ -->
+<div class="page" id="pWeekly">
+  <div class="brow" style="margin-bottom:12px">
+    <select id="wkMonSel"></select>
+  </div>
+  <div class="gold-card">
+    <div class="gc-title">สรุปรายสัปดาห์</div>
+    <div class="gc-body" style="overflow-x:auto"><table class="htbl" id="wkTbl"></table></div>
+  </div>
+  <div class="gold-card">
+    <div class="gc-title">แนวโน้มรายวัน</div>
+    <div class="gc-body"><div class="cw" style="height:200px"><canvas id="cWkLine"></canvas></div></div>
+  </div>
+</div>
+
+<!-- ═══════════════ PAGE: รายเดือน ═══════════════ -->
+<div class="page" id="pMonthly">
+  <div class="gold-card">
+    <div class="gc-title">สรุปรายเดือน</div>
+    <div class="gc-body" style="overflow-x:auto"><table class="htbl" id="monTbl"></table></div>
+  </div>
+  <div class="gold-card">
+    <div class="gc-title">กราฟการลารายเดือน</div>
+    <div class="gc-body"><div class="cw" style="height:220px"><canvas id="cMonBar"></canvas></div></div>
+  </div>
+  <div class="gold-card">
+    <div class="gc-title">Top 10 ลาบ่อยที่สุด (สะสมทุกเดือน)</div>
+    <div class="gc-body" style="overflow-x:auto"><table class="htbl" id="monTopTbl"></table></div>
+  </div>
+</div>
+
+<!-- ═══════════════ PAGE: ภาพรวมปี ═══════════════ -->
+<div class="page" id="pYearly">
+  <div class="kpi-row">
+    <div class="kpi kblue"><div class="kl">พนักงานทั้งหมด</div><div class="kv" id="yEmp">—</div></div>
+    <div class="kpi kred"><div class="kl">ลาป่วยรวม</div><div class="kv" id="ySick">0</div></div>
+    <div class="kpi kamber"><div class="kl">ลากิจรวม</div><div class="kv" id="yBiz">0</div></div>
+    <div class="kpi kpurple"><div class="kl">ลาพักร้อนรวม</div><div class="kv" id="yVac">0</div></div>
+    <div class="kpi kgray"><div class="kl">วันหยุดรวม</div><div class="kv" id="yOff">0</div></div>
+    <div class="kpi kgreen"><div class="kl">มาทำงานรวม</div><div class="kv" id="yCame">0</div></div>
+  </div>
+  <div class="g2">
+    <div class="gold-card">
+      <div class="gc-title">สัดส่วนการลาทั้งปี</div>
+      <div class="gc-body"><div class="cw" style="height:200px"><canvas id="cYearDonut"></canvas></div></div>
+    </div>
+    <div class="gold-card">
+      <div class="gc-title">แนวโน้มการลารายเดือน</div>
+      <div class="gc-body"><div class="cw" style="height:200px"><canvas id="cYearLine"></canvas></div></div>
+    </div>
+  </div>
+  <div class="gold-card">
+    <div class="gc-title">สรุปรายคน — ขาด / ลา / มาสาย ทั้งปี 2569</div>
+    <div class="gc-body">
+      <div class="brow" style="margin-bottom:10px">
+        <select id="yTeamFilter"><option value="">ทุกทีม</option></select>
+        <select id="ySortSel">
+          <option value="total">เรียงตามลามากที่สุด</option>
+          <option value="sick">เรียงตามลาป่วย</option>
+          <option value="vac">เรียงตามลาพักร้อน</option>
+          <option value="biz">เรียงตามลากิจ</option>
+        </select>
+      </div>
+      <div style="overflow-x:auto"><table class="htbl" id="yearPersonTbl" style="min-width:750px"></table></div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════ PAGE: ตั้งค่า ═══════════════ -->
+<div class="page" id="pSettings">
+  <div class="url-box">
+    <strong>🔗 URL เชื่อมต่อ Google Apps Script</strong>
+    <p style="margin:4px 0;font-size:11px;color:#1e40af">วาง URL ที่ได้จากการ Deploy Web App ใน Google Apps Script</p>
+    <input type="text" id="scriptUrl" placeholder="https://script.google.com/macros/s/.../exec">
+    <div class="brow" style="margin-top:8px">
+      <button id="btnSaveUrl">บันทึก URL</button>
+      <button id="btnTestConn">ทดสอบการเชื่อมต่อ</button>
+      <span id="connMsg" style="font-size:11px;color:#7a6000"></span>
+    </div>
+  </div>
+  <div class="imp-box">
+    <h3>นำเข้าข้อมูลรายวัน</h3>
+    <p>วางข้อมูลจาก Google Sheets (คั่นด้วย Tab):<br>รหัส &nbsp;ชื่อ &nbsp;ชื่อเล่น &nbsp;แผนก &nbsp;วันที่ &nbsp;สถานะ/เวลา<br>
+    <em>ตัวอย่างวันที่: 27-มี.ค.-2569</em></p>
+    <textarea id="raw" placeholder="AKN00005&#9;สุมณฑา นิลชำนาญ&#9;กระตั้ว&#9;เทเลเซลล์&#9;27-มี.ค.-2569&#9;9:00"></textarea>
+    <div class="brow">
+      <button id="btnImp">นำเข้าข้อมูล</button>
+      <button id="btnDemo">โหลดข้อมูลตัวอย่าง</button>
+      <button class="bd" id="btnClr">ล้างข้อมูลทั้งหมด</button>
+    </div>
+    <div id="msgOk" class="msg msgok"></div>
+    <div id="msgEr" class="msg msger"></div>
+  </div>
+  <div class="gold-card">
+    <div class="gc-title">ข้อมูลในระบบ</div>
+    <div class="gc-body" id="dataStatus"><div class="empty">ยังไม่มีข้อมูล</div></div>
+  </div>
+</div>
+
+<script>
+// ═══════════════════════════════════════════════════════════
+// CONFIG
+// ═══════════════════════════════════════════════════════════
+var SCRIPT_URL = localStorage.getItem('hr_script_url') || '';
+var DB = {};   // { "2026-03": { "2026-03-27": [{id,name,nick,dept,date,status,type}] } }
+var CH = {};
+var MON = '';
+var DAY = '';
+
+// ═══════════════════════════════════════════════════════════
+// HELPERS
+// ═══════════════════════════════════════════════════════════
+var THMO={'ม.ค.':'01','ก.พ.':'02','มี.ค.':'03','เม.ย.':'04','พ.ค.':'05','มิ.ย.':'06','ก.ค.':'07','ส.ค.':'08','ก.ย.':'09','ต.ค.':'10','พ.ย.':'11','ธ.ค.':'12'};
+var MONL=['','ม.ค.','ก.พ.','มี.ค.','เม.ย.','พ.ค.','มิ.ย.','ก.ค.','ส.ค.','ก.ย.','ต.ค.','พ.ย.','ธ.ค.'];
+var DAYL=['อาทิตย์','จันทร์','อังคาร','พุธ','พฤหัสบดี','ศุกร์','เสาร์'];
+
+function parseDt(s) {
+  var m = s.match(/(\d+)-(.+?)-(\d+)/);
+  if (!m) return null;
+  var mo = THMO[m[2].trim()]; if (!mo) return null;
+  var y = parseInt(m[3]); if (y > 2500) y -= 543;
+  return y+'-'+mo+'-'+('0'+parseInt(m[1])).slice(-2);
+}
+function classT(s) {
+  if (!s || s === null || s === undefined) return 'nodata';
+  var t = s.toString().trim();
+  if (!t || t === '' || t === 'undefined' || t === 'null') return 'nodata';
+  if (t === 'ลาป่วย') return 'sick';
+  if (t === 'ลาป่วยครึ่งวัน' || t === 'ลาป่วย(ครึ่งวัน)' || t === 'ลาป่วย ครึ่งวัน') return 'sick_half';
+  if (t === 'ลากิจ') return 'biz';
+  if (t === 'ลากิจครึ่งวัน' || t === 'ลากิจ(ครึ่งวัน)' || t === 'ลากิจ ครึ่งวัน') return 'biz_half';
+  if (t === 'ลาพักร้อน') return 'vac';
+  if (t === 'ลาพักร้อนครึ่งวัน' || t === 'ลาพักร้อน(ครึ่งวัน)' || t === 'ลาพักร้อน ครึ่งวัน') return 'vac_half';
+  if (t === 'วันหยุดประจำสัปดาห์' || t === 'วันหยุด') return 'off';
+  if (t === 'ลาออก') return 'resign';
+  if (t === 'พักงาน') return 'suspend';
+  if (t === 'WFH' || t === 'ทำงานนอกสถานที่') return 'wfh';
+  if (t === 'มาสาย') return 'late';
+  // time pattern: 8:00, 08:00, 9:00, 17:00
+  if (/^\d{1,2}:\d{2}$/.test(t)) return 'came';
+  return 'other';
+}
+function mkKey(d){return d.slice(0,7)}
+function mLab(mk){
+  if (!mk || !/^\d{4}-\d{2}$/.test(mk)) return 'เดือนไม่ถูกต้อง';
+  var p=mk.split('-');
+  return MONL[parseInt(p[1])]+' '+(parseInt(p[0])+543);
+}
+function fDt(d){
+  if (!d || !/^\d{4}-\d{2}-\d{2}$/.test(d)) return 'วันที่ไม่ถูกต้อง';
+  var p=d.split('-');
+  var y=parseInt(p[0]), m=parseInt(p[1]), day=parseInt(p[2]);
+  if (!y||!m||!day||m<1||m>12||day<1||day>31) return 'วันที่ไม่ถูกต้อง';
+  var dt=new Date(y, m-1, day);
+  var dn=dt.getDay();
+  return 'วัน'+DAYL[dn]+' ที่ '+day+' '+MONL[m]+' '+(y+543);
+}
+function allMons(){return Object.keys(DB).sort()}
+function datesOf(mk){return Object.keys(DB[mk]||{}).sort()}
+function rowsOf(mk,d){return(DB[mk]||{})[d]||[]}
+function allR(mk){return datesOf(mk).reduce(function(a,d){return a.concat(rowsOf(mk,d));},[])}
+function allRAll(){return allMons().reduce(function(a,mk){return a.concat(allR(mk));},[])}
+function cntT(rs,t){return rs.filter(function(r){return r.type===t}).length}
+// นับรวมครึ่งวัน: เต็มวัน=1, ครึ่งวัน=0.5
+function cntLeave(rs, type) {
+  var full = cntT(rs, type);
+  var half = cntT(rs, type+'_half');
+  return full + half * 0.5;
+}
+function fmtLeave(n) {
+  // แสดงเป็น 1, 1.5, 2 ฯลฯ
+  return n % 1 === 0 ? n.toString() : n.toFixed(1);
+}
+function uniqIds(rs){var u={};rs.forEach(function(r){u[r.id]=1});return Object.keys(u).length}
+function getWeekNum(d){
+  var p=d.split('-');
+  var dt=new Date(parseInt(p[0]),parseInt(p[1])-1,parseInt(p[2]));
+  var s=new Date(dt.getFullYear(),dt.getMonth(),1);
+  return Math.ceil((dt.getDate()+s.getDay())/7);
+}
+function mkC(id,cfg){if(CH[id])CH[id].destroy();var el=document.getElementById(id);if(!el)return;CH[id]=new Chart(el.getContext('2d'),cfg)}
+
+// ═══════════════════════════════════════════════════════════
+// DATA MANAGEMENT
+// ═══════════════════════════════════════════════════════════
+function addRec(id,name,nick,dept,date,status){
+  var mk=mkKey(date);
+  if(!DB[mk])DB[mk]={};
+  if(!DB[mk][date])DB[mk][date]=[];
+  var found=null;
+  for(var i=0;i<DB[mk][date].length;i++){if(DB[mk][date][i].id===id){found=DB[mk][date][i];break}}
+  var obj={id:id,name:name,nick:nick,dept:dept,date:date,status:status,type:classT(status)};
+  if(found)Object.assign(found,obj);else DB[mk][date].push(obj);
+}
+
+// ── IndexedDB: บันทึก/โหลด DB (ทำงานได้ทั้ง file:// และ http://) ──
+var IDB_NAME = 'hr_akane', IDB_STORE = 'db_store', IDB_KEY = 'main';
+var idb = null;
+
+function openIDB(cb) {
+  if (idb) { cb(idb); return; }
+  var req = indexedDB.open(IDB_NAME, 1);
+  req.onupgradeneeded = function(e) {
+    e.target.result.createObjectStore(IDB_STORE);
+  };
+  req.onsuccess = function(e) { idb = e.target.result; cb(idb); };
+  req.onerror   = function()  { cb(null); };
+}
+
+function saveLocal() {
+  openIDB(function(db) {
+    if (!db) return;
+    try {
+      var tx = db.transaction(IDB_STORE, 'readwrite');
+      tx.objectStore(IDB_STORE).put(JSON.stringify(DB), IDB_KEY);
+    } catch(e) {}
+  });
+}
+
+function loadLocal(cb) {
+  openIDB(function(db) {
+    if (!db) { cb(false); return; }
+    try {
+      var tx  = db.transaction(IDB_STORE, 'readonly');
+      var req = tx.objectStore(IDB_STORE).get(IDB_KEY);
+      req.onsuccess = function(e) {
+        var saved = e.target.result;
+        if (!saved) { cb(false); return; }
+        try {
+          var parsed = JSON.parse(saved);
+          var valid  = {};
+          var mRe = /^\d{4}-\d{2}$/, dRe = /^\d{4}-\d{2}-\d{2}$/;
+          Object.keys(parsed).forEach(function(mk) {
+            if (!mRe.test(mk)) return;
+            valid[mk] = {};
+            Object.keys(parsed[mk]).forEach(function(d) {
+              if (!dRe.test(d)) return;
+              var rows = (parsed[mk][d] || []).filter(function(r) {
+                return r && r.id && r.date && dRe.test(r.date);
+              });
+              if (rows.length) valid[mk][d] = rows;
+            });
+            if (!Object.keys(valid[mk]).length) delete valid[mk];
+          });
+          if (Object.keys(valid).length) { DB = valid; cb(true); }
+          else cb(false);
+        } catch(ex) { cb(false); }
+      };
+      req.onerror = function() { cb(false); };
+    } catch(e) { cb(false); }
+  });
+}
+
+function clearLocal() {
+  openIDB(function(db) {
+    if (!db) return;
+    try {
+      var tx = db.transaction(IDB_STORE, 'readwrite');
+      tx.objectStore(IDB_STORE).delete(IDB_KEY);
+    } catch(e) {}
+  });
+}
+
+function loadFromServer(cb) {
+  if (!SCRIPT_URL) { cb && cb(); return; }
+  setSyncStatus('ld','⏳ กำลังโหลดข้อมูล...');
+  fetch(SCRIPT_URL+'?action=getAllData')
+    .then(function(r){return r.json()})
+    .then(function(data){
+      if(data.ok && data.rows) {
+        DB = {};
+        data.rows.forEach(function(r){ if(r.date) addRec(r.id,r.name,r.nick,r.dept,r.date,r.status); });
+        setSyncStatus('ok','✅ ซิงค์กับ Google Sheets แล้ว');
+        cb && cb();
+      }
+    }).catch(function(){ setSyncStatus('er','❌ เชื่อมต่อ Google Sheets ไม่ได้'); cb && cb(); });
+}
+
+function saveToServer(rows, cb) {
+  if (!SCRIPT_URL) { cb && cb(); return; }
+  setSyncStatus('ld','⏳ กำลังบันทึกข้อมูล...');
+  fetch(SCRIPT_URL, { method:'POST', body: JSON.stringify({action:'saveRows', rows:rows}) })
+    .then(function(r){return r.json()})
+    .then(function(data){
+      if(data.ok) setSyncStatus('ok','✅ บันทึกลง Google Sheets แล้ว');
+      else setSyncStatus('er','❌ บันทึกไม่สำเร็จ');
+      cb && cb();
+    }).catch(function(){ setSyncStatus('er','❌ บันทึกไม่สำเร็จ'); cb && cb(); });
+}
+
+function setSyncStatus(type, msg) {
+  var el = document.getElementById('syncStatus');
+  el.textContent = msg;
+  el.className = 'sync-status sync-' + type;
+}
+
+// ═══════════════════════════════════════════════════════════
+// NAV TABS
+// ═══════════════════════════════════════════════════════════
+document.querySelectorAll('.nav-tab').forEach(function(tab) {
+  tab.addEventListener('click', function() {
+    document.querySelectorAll('.nav-tab').forEach(function(t){t.classList.remove('on')});
+    document.querySelectorAll('.page').forEach(function(p){p.classList.remove('on')});
+    tab.classList.add('on');
+    var pid = tab.getAttribute('data-p');
+    document.getElementById(pid).classList.add('on');
+    if(pid==='pTeam') renderTeam();
+    else if(pid==='pWeekly') renderWeekly();
+    else if(pid==='pMonthly') renderMonthly();
+    else if(pid==='pYearly') renderYearly();
+    else if(pid==='pDaily') renderDaily();
+    else if(pid==='pSettings') renderDataStatus();
+  });
+});
+
+// ═══════════════════════════════════════════════════════════
+// SETTINGS
+// ═══════════════════════════════════════════════════════════
+document.getElementById('scriptUrl').value = SCRIPT_URL;
+document.getElementById('btnSaveUrl').addEventListener('click', function() {
+  SCRIPT_URL = document.getElementById('scriptUrl').value.trim();
+  localStorage.setItem('hr_script_url', SCRIPT_URL);
+  document.getElementById('connMsg').textContent = 'บันทึก URL แล้วค่ะ กด "ทดสอบการเชื่อมต่อ" เพื่อตรวจสอบ';
+});
+document.getElementById('btnTestConn').addEventListener('click', function() {
+  if (!SCRIPT_URL) { document.getElementById('connMsg').textContent = 'กรุณาใส่ URL ก่อนนะคะ'; return; }
+  document.getElementById('connMsg').textContent = '⏳ กำลังทดสอบการเชื่อมต่อ...';
+  fetch(SCRIPT_URL+'?action=getData&month=test')
+    .then(function(r){return r.json()})
+    .then(function(){ document.getElementById('connMsg').textContent = '✅ เชื่อมต่อสำเร็จค่ะ'; })
+    .catch(function(){ document.getElementById('connMsg').textContent = '❌ เชื่อมต่อ Google Sheets ไม่ได้ ตรวจสอบ URL'; });
+});
+
+// IMPORT
+document.getElementById('btnImp').addEventListener('click', function() {
+  var raw = document.getElementById('raw').value.trim();
+  if (!raw) { showMsg(false,'กรุณาวางข้อมูลก่อนนะคะ'); return; }
+  var lines = raw.split('\n').filter(function(l){return l.trim()});
+  var ok=0, skip=0, newRows=[];
+  lines.forEach(function(line) {
+    // รองรับทั้ง Tab-separated และ space (กรณี copy จาก Sheets แล้ว Tab หาย)
+    var cols = line.split('\t').map(function(c){return c.trim()});
+
+    // ถ้าได้คอลัมน์แค่ 1 แสดงว่า Tab หาย — ให้ลอง parse ด้วย regex
+    if (cols.length < 5) {
+      // pattern: รหัส(AKN...) ชื่อ ชื่อเล่น แผนก วันที่(dd-mm-yyyy) เวลาเข้า [เวลาออก] [สถานะ]
+      var m = line.match(/^(AKN\S*|ANK\S*)\s+(.+?)\s{2,}(\S+)\s{2,}(\S+)\s{2,}(\d{1,2}-[ก-ฮ.]+\d{4}|\d{1,2}-[ก-ฮ.]+\d{4})\s+(\d{1,2}:\d{2})\s*(\d{1,2}:\d{2})?/u);
+      if (m) {
+        cols = [m[1], m[2].trim(), m[3], m[4], m[5], m[6], m[7]||''];
+      } else {
+        skip++; return;
+      }
+    }
+
+    var date = parseDt(cols[4]);
+    if (!date) { skip++; return; }
+
+    // cols[5] = เวลาเข้า, cols[6] = เวลาออก (ถ้ามี) — ใช้เฉพาะ cols[5] เป็นสถานะ
+    // ถ้าคอลัมน์ 5 เป็นเวลา (HH:MM) ถือว่ามาทำงาน
+    // ถ้าเป็นข้อความเช่น "ลาป่วย" ถือว่าลา
+    var statusRaw = cols[5] || '';
+    // กรณีมี 7+ คอลัมน์: [รหัส, ชื่อ, ชื่อเล่น, แผนก, วันที่, เวลาเข้า, เวลาออก]
+    // เอาแค่ cols[5] (เวลาเข้า) มาเป็น status
+    var status = statusRaw.trim();
+
+    addRec(cols[0], cols[1], cols[2], cols[3], date, status);
+    newRows.push({
+      id: cols[0], name: cols[1], nick: cols[2], dept: cols[3],
+      date: date, status: status, type: classT(status)
+    });
+    ok++;
+  });
+  document.getElementById('raw').value = '';
+  if (ok > 0) {
+    // ตั้ง MON และ DAY ให้ตรงกับข้อมูลที่เพิ่งนำเข้า
+    if (newRows.length > 0) {
+      var lastImported = newRows[newRows.length - 1];
+      MON = mkKey(lastImported.date);
+      DAY = lastImported.date;
+    }
+    showMsg(true,'นำเข้าสำเร็จ '+ok+' รายการ'+(skip?' (ข้าม '+skip+')':''));
+    saveLocal();
+    saveToServer(newRows, function(){ refreshAll(); });
+  } else {
+    showMsg(false,'ไม่พบข้อมูล — ตรวจสอบรูปแบบวันที่ เช่น 27-มี.ค.-2569 หรือ 27-มี.ค.-2026 (ข้าม '+skip+' บรรทัด)');
+  }
+});
+document.getElementById('btnClr').addEventListener('click', function() {
+  if (!confirm('ต้องการล้างข้อมูลทั้งหมดใช่ไหมคะ?')) return;
+  DB={}; MON=''; DAY=''; clearLocal(); refreshAll(); showMsg(true,'ล้างข้อมูลเรียบร้อยแล้วค่ะ');
+});
+
+function showMsg(ok, txt) {
+  var eid = ok ? 'msgOk' : 'msgEr', hid = ok ? 'msgEr' : 'msgOk';
+  var e=document.getElementById(eid); e.textContent=txt; e.style.display='block';
+  document.getElementById(hid).style.display='none';
+  setTimeout(function(){e.style.display='none'},4000);
+}
+
+// ═══════════════════════════════════════════════════════════
+// DEMO
+// ═══════════════════════════════════════════════════════════
+document.getElementById('btnDemo').addEventListener('click', function() {
+  var demo=[
+    ['AKN00005','สุมณฑา นิลชำนาญ','กระตั้ว','เทเลเซลล์','23-มี.ค.-2026','9:00'],
+    ['AKN00055','อินณัชอร เธียรฉัตรตระกูล','เหมย','เทเลเซลล์','23-มี.ค.-2026','ลาป่วย'],
+    ['AKN00126','สุชาดา สวัสดี','พิมพ์','เทเลเซลล์','23-มี.ค.-2026','ลากิจ'],
+    ['AKN00016','ธัญญรักษ์ นวลหมื่นไวย','ธัญ','Content','23-มี.ค.-2026','ลาพักร้อน'],
+    ['AKN00077','อารีรัตน์ จิตรจา','อ้อม','Live','23-มี.ค.-2026','8:00'],
+    ['AKN00097','หนึ่งฤดี มาตขาว','นุ๊ก','OFFICE','23-มี.ค.-2026','8:57'],
+    ['AKN00127','พรทิพย์ ทองประเสริฐ','ปุ้ย','Admin','23-มี.ค.-2026','9:00'],
+    ['AKN00013','ลำใย ชิดสุข','นิ่ม','เทเลเซลล์','24-มี.ค.-2026','8:58'],
+    ['AKN00055','อินณัชอร เธียรฉัตรตระกูล','เหมย','เทเลเซลล์','24-มี.ค.-2026','ลาป่วย'],
+    ['AKN00067','ณรงค์ รัดสันเทียะ','ป้อน','Content','24-มี.ค.-2026','ลาพักร้อน'],
+    ['AKN00104','อรนิชา บุญช่วยสุวรรณ','โดนัท','Content','24-มี.ค.-2026','ลาพักร้อน'],
+    ['AKN00077','อารีรัตน์ จิตรจา','อ้อม','Live','24-มี.ค.-2026','ลากิจ'],
+    ['AKN00097','หนึ่งฤดี มาตขาว','นุ๊ก','OFFICE','24-มี.ค.-2026','9:00'],
+    ['AKN00016','ธัญญรักษ์ นวลหมื่นไวย','ธัญ','Content','25-มี.ค.-2026','ลาพักร้อน'],
+    ['AKN00126','สุชาดา สวัสดี','พิมพ์','เทเลเซลล์','25-มี.ค.-2026','ลากิจ'],
+    ['AKN00067','ณรงค์ รัดสันเทียะ','ป้อน','Content','25-มี.ค.-2026','ลาพักร้อน'],
+    ['AKN00005','สุมณฑา นิลชำนาญ','กระตั้ว','เทเลเซลล์','25-มี.ค.-2026','9:00'],
+    ['AKN00055','อินณัชอร เธียรฉัตรตระกูล','เหมย','เทเลเซลล์','26-มี.ค.-2026','ลาป่วย'],
+    ['AKN00104','อรนิชา บุญช่วยสุวรรณ','โดนัท','Content','26-มี.ค.-2026','ลาพักร้อน'],
+    ['AKN00016','ธัญญรักษ์ นวลหมื่นไวย','ธัญ','Content','26-มี.ค.-2026','ลาพักร้อน'],
+    ['AKN00005','สุมณฑา นิลชำนาญ','กระตั้ว','เทเลเซลล์','27-มี.ค.-2026','9:00'],
+    ['AKN00013','ลำใย ชิดสุข','นิ่ม','เทเลเซลล์','27-มี.ค.-2026','8:58'],
+    ['AKN00042','เนตรนภา ภูมิพฤติพันธุ์','ปลา','เทเลเซลล์','27-มี.ค.-2026','9:00'],
+    ['AKN00055','อินณัชอร เธียรฉัตรตระกูล','เหมย','เทเลเซลล์','27-มี.ค.-2026','ลาป่วย'],
+    ['AKN00099','ณิชามล กอยากลาง','ปลาวาฬ','เทเลเซลล์','27-มี.ค.-2026','8:46'],
+    ['AKN00110','บังอร แสนสันเทียะ','อร','เทเลเซลล์','27-มี.ค.-2026','8:23'],
+    ['AKN00130','จิราพร กาบกระโทก','แนน','เทเลเซลล์','27-มี.ค.-2026','8:43'],
+    ['AKN000157','นิรันดร์ สีนิล','อาอี๋','เทเลเซลล์','27-มี.ค.-2026','8:44'],
+    ['AKN000167','วิภาภรณ์ ภู่โต','เพชร','เทเลเซลล์','27-มี.ค.-2026','8:58'],
+    ['AKN00022','วิภา คูณแสน','จ๋า','Live','27-มี.ค.-2026','วันหยุดประจำสัปดาห์'],
+    ['AKN00024','อลงกต นิติพาณิชย์กุล','แฟรงค์','Live','27-มี.ค.-2026','17:00'],
+    ['AKN00077','อารีรัตน์ จิตรจา','อ้อม','Live','27-มี.ค.-2026','8:00'],
+    ['AKN00102','มุกดา นะทะศิริ','มุก','Live','27-มี.ค.-2026','8:00'],
+    ['AKN00123','ชรินรัตน์ บุตรศรีภูมิ','เจน','เทเลเซลล์','27-มี.ค.-2026','8:43'],
+    ['AKN00126','สุชาดา สวัสดี','พิมพ์','เทเลเซลล์','27-มี.ค.-2026','ลากิจ'],
+    ['AKN00127','พรทิพย์ ทองประเสริฐ','ปุ้ย','Admin','27-มี.ค.-2026','9:00'],
+    ['AKN000135','สุชาดา ขวดสันเทียะ','หมิว','Admin','27-มี.ค.-2026','9:00'],
+    ['AKN00097','หนึ่งฤดี มาตขาว','นุ๊ก','OFFICE','27-มี.ค.-2026','8:57'],
+    ['AKN00003','สุชานัน กลิ่นสุคนธ์','พี่เบล','OFFICE','27-มี.ค.-2026','8:45'],
+    ['AKN00008','จรรยพร อุ่นทะเล','เกด','OFFICE','27-มี.ค.-2026','8:47'],
+    ['AKN00031','อรณิชา บัวทองหลาง','แหม่ม','OFFICE','27-มี.ค.-2026','9:00'],
+    ['AKN00016','ธัญญรักษ์ นวลหมื่นไวย','ธัญ','Content','27-มี.ค.-2026','ลาพักร้อน'],
+    ['AKN00026','ปนัดดา ภาษี','ปลา','Content','27-มี.ค.-2026','8:53'],
+    ['ANK00050','สุทัศน์ แผ่วสูงเนิน','สแตมป์','Content','27-มี.ค.-2026','8:51'],
+    ['AKN00067','ณรงค์ รัดสันเทียะ','ป้อน','Content','27-มี.ค.-2026','ลาพักร้อน'],
+    ['AKN00104','อรนิชา บุญช่วยสุวรรณ','โดนัท','Content','27-มี.ค.-2026','ลาพักร้อน']
+  ];
+  demo.forEach(function(r){var d=parseDt(r[4]);if(d)addRec(r[0],r[1],r[2],r[3],d,r[5]);});
+  // ตั้ง MON/DAY ให้ตรงวันสุดท้ายของ demo
+  var demoMons = allMons();
+  if (demoMons.length) {
+    MON = demoMons[demoMons.length - 1];
+    var demoDates = datesOf(MON);
+    DAY = demoDates[demoDates.length - 1] || '';
+  }
+  // ตั้ง MON/DAY ให้ตรงวันสุดท้ายของ demo
+  var demoMons = allMons();
+  if (demoMons.length) {
+    MON = demoMons[demoMons.length - 1];
+    var demoDates = datesOf(MON);
+    DAY = demoDates[demoDates.length - 1] || '';
+  }
+  saveLocal();
+  showMsg(true,'โหลดข้อมูลตัวอย่างสำเร็จแล้วค่ะ');
+  refreshAll();
+});
+
+// ═══════════════════════════════════════════════════════════
+// REFRESH ALL
+// ═══════════════════════════════════════════════════════════
+function refreshAll() {
+  var ms = allMons();
+  if (!ms.length) return;
+  // ถ้า MON ที่เซ็ตไว้มีข้อมูลอยู่ให้คงไว้ ไม่งั้นเลือกเดือนล่าสุด
+  if (!MON || !DB[MON]) MON = ms[ms.length-1];
+
+  // populate all month selects
+  var opts = ms.map(function(m){return '<option value="'+m+'"'+(m===MON?' selected':'')+'>'+mLab(m)+'</option>';}).join('');
+  ['dayMonSel','tmMonSel','wkMonSel'].forEach(function(id){
+    var el=document.getElementById(id);
+    if(el){ el.innerHTML=opts; el.value=MON; }
+  });
+
+  // populate day select
+  var ds = datesOf(MON);
+  if (!DAY||ds.indexOf(DAY)<0) DAY = ds[ds.length-1]||'';
+  var dOpts = ds.map(function(d){return'<option value="'+d+'"'+(d===DAY?' selected':'')+'>'+fDt(d)+'</option>';}).join('');
+  document.getElementById('daySelect').innerHTML = dOpts;
+
+  renderDaily();
+  renderDataStatus();
+}
+
+// ═══════════════════════════════════════════════════════════
+// LATE MANAGEMENT
+// ═══════════════════════════════════════════════════════════
+var LATE_QUOTA = 3; // โควต้ามาสายต่อเดือน
+
+function countLateInMonth(mk, empId) {
+  // นับจำนวนครั้งมาสายในเดือน mk สำหรับพนักงาน empId
+  return allR(mk).filter(function(r){ return r.id===empId && r.type==='late'; }).length;
+}
+
+window.markHalfLeave = function markHalfLeave(id, nick, dept, date, type) {
+  // type = 'sick_half' | 'biz_half' | 'vac_half'
+  var labelMap = {sick_half:'ลาป่วยครึ่งวัน', biz_half:'ลากิจครึ่งวัน', vac_half:'ลาพักร้อนครึ่งวัน'};
+  addRec(id, '', nick, dept, date, labelMap[type] || type);
+  var mk = mkKey(date);
+  var row = rowsOf(mk, date).find(function(r){ return r.id===id; }) || {id:id,nick:nick,dept:dept,date:date,status:labelMap[type],type:type,name:''};
+  saveLocal();
+  saveToServer([row], function(){ renderDaily(); });
+};
+
+window.markLate = function markLate(id, nick, dept, date) {
+  var mk = mkKey(date);
+  var lateCount = countLateInMonth(mk, id);
+  var quota = LATE_QUOTA;
+  if (lateCount >= quota) {
+    if (!confirm('⚠️ ' + nick + ' มาสายครบ ' + quota + ' ครั้งแล้วในเดือนนี้\nต้องการบันทึกเพิ่มอีกใช่ไหม?')) return;
+  }
+  // update record
+  addRec(id, '', nick, dept, date, 'มาสาย');
+  // sync to server
+  var row = rowsOf(mk, date).find(function(r){ return r.id===id; }) || {id:id,nick:nick,dept:dept,date:date,status:'มาสาย',type:'late',name:''};
+  saveToServer([row], function(){ renderDaily(); });
+}
+
+window.unmarkLate = function unmarkLate(id, nick, dept, date) {
+  // เปลี่ยนกลับเป็น came
+  addRec(id, '', nick, dept, date, 'came');
+  var mk = mkKey(date);
+  var row = rowsOf(mk, date).find(function(r){ return r.id===id; }) || {id:id,nick:nick,dept:dept,date:date,status:'came',type:'came',name:''};
+  saveToServer([row], function(){ renderDaily(); });
+}
+
+function getLateQuotaBar(used, quota) {
+  var pct = Math.round(used/quota*100);
+  var color = used>=quota ? '#b91c1c' : used>=2 ? '#b45309' : '#15803d';
+  return '<span style="font-size:10px;color:'+color+';font-weight:700">'+used+'/'+quota+' ครั้ง</span>';
+}
+
+// ═══════════════════════════════════════════════════════════
+// PAGE: รายวัน
+// ═══════════════════════════════════════════════════════════
+function renderDaily() {
+  if (!DAY) return;
+  var rs = rowsOf(MON, DAY);
+  document.getElementById('dateHdr').textContent = fDt(DAY);
+  var came=cntT(rs,'came'), late=cntT(rs,'late');
+  var sick=cntLeave(rs,'sick'), biz=cntLeave(rs,'biz'), vac=cntLeave(rs,'vac');
+  var off=cntT(rs,'off')+cntT(rs,'wfh')+cntT(rs,'resign')+cntT(rs,'suspend')+cntT(rs,'nodata');
+  var tot=rs.length;
+  document.getElementById('dTot').textContent=tot||'—';
+  document.getElementById('dCame').textContent=came||'—';
+  document.getElementById('dLate').textContent=late;
+  document.getElementById('dSick').textContent=fmtLeave(sick);
+  document.getElementById('dBiz').textContent=fmtLeave(biz);
+  document.getElementById('dVac').textContent=fmtLeave(vac);
+  document.getElementById('dOff').textContent=off;
+
+  // leave list
+  var TB={
+  sick:      '<span class="bdg bdg-r">ลาป่วย</span>',
+  sick_half: '<span class="bdg bdg-r" style="opacity:.7">ลาป่วย ½ วัน</span>',
+  biz:       '<span class="bdg bdg-a">ลากิจ</span>',
+  biz_half:  '<span class="bdg bdg-a" style="opacity:.7">ลากิจ ½ วัน</span>',
+  vac:       '<span class="bdg bdg-b">ลาพักร้อน</span>',
+  vac_half:  '<span class="bdg bdg-b" style="opacity:.7">ลาพักร้อน ½ วัน</span>',
+  off:       '<span class="bdg bdg-n">หยุด</span>',
+  late:      '<span class="bdg bdg-late">⏰ มาสาย</span>',
+  resign:    '<span class="bdg bdg-p">ลาออก</span>',
+  suspend:   '<span class="bdg bdg-p">พักงาน</span>',
+  nodata:    '<span class="bdg bdg-n">ไม่มีข้อมูล</span>',
+  other:     '<span class="bdg bdg-n">อื่นๆ</span>'
+};
+  var lv=rs.filter(function(r){return r.type==='sick'||r.type==='sick_half'||r.type==='biz'||r.type==='biz_half'||r.type==='vac'||r.type==='vac_half'||r.type==='off'||r.type==='late'||r.type==='resign'||r.type==='suspend'||r.type==='wfh'||r.type==='nodata';});
+  document.getElementById('leaveList').innerHTML = (function(){
+    var mk2 = mkKey(DAY);
+    // ส่วนผู้ลา
+    var lvHtml = lv.length ? lv.map(function(r){
+      var lateCount = r.type==='late' ? countLateInMonth(mk2,r.id) : 0;
+      var lateInfo  = r.type==='late' ? ' <span style="font-size:10px;color:#92400e;font-weight:700">'+lateCount+'/'+LATE_QUOTA+' ครั้ง</span>' : '';
+      var cancelBtn = r.type==='late'
+        ? '<button data-action="unmarkLate" data-id="'+r.id+'" data-nick="'+r.nick+'" data-dept="'+r.dept+'" data-date="'+DAY+'" style="font-size:10px;padding:2px 7px;border:1px solid #94a3b8;color:#64748b;background:#f8fafc;border-radius:4px;cursor:pointer;margin-left:4px">ยกเลิก</button>'
+        : '';
+      return '<div class="prow"><span><span class="pname">'+r.nick+'</span><span class="pdept">'+r.dept+'</span>'+lateInfo+'</span><span>'+(TB[r.type]||TB.other)+cancelBtn+'</span></div>';
+    }).join('') : '<div style="padding:4px 0;color:#15803d;font-size:12px">✅ ไม่มีผู้ลา/หยุดวันนี้</div>';
+
+    // ส่วนมาทำงาน + ปุ่มมาสาย
+    var cameRs2 = rs.filter(function(r){ return r.type==='came'; });
+    var cameHtml = cameRs2.length
+      ? '<div style="margin-top:10px;border-top:1px dashed #e8d080;padding-top:8px">'
+        + '<div style="font-size:11px;font-weight:700;color:#5a3e00;margin-bottom:6px">✅ มาทำงาน ('+cameRs2.length+' คน) — กด ⏰ เพื่อทำเครื่องหมายมาสาย</div>'
+        + cameRs2.map(function(r){
+            var lc  = countLateInMonth(mk2, r.id);
+            var over= lc >= LATE_QUOTA;
+            var qBar= '<span style="font-size:10px;font-weight:700;color:'+(over?'#b91c1c':lc>0?'#b45309':'#15803d')+'">'+lc+'/'+LATE_QUOTA+'</span>';
+            var bc  = over ? '#b91c1c' : '#92400e';
+            var bbg = over ? '#fee2e2' : '#fef3c7';
+            return '<div class="prow" style="padding:5px 0">'
+              + '<span style="display:flex;align-items:center;gap:5px">'
+              + '<span class="pname">'+r.nick+'</span>'
+              + '<span class="pdept">'+r.dept+'</span>'
+              + '<span style="font-size:10px;color:#7a6000">('+r.status+')</span>'
+              + qBar
+              + '</span>'
+              + '<div style="display:flex;gap:4px;flex-wrap:wrap">'
+              + '<button data-action="markLate" data-id="'+r.id+'" data-nick="'+r.nick+'" data-dept="'+r.dept+'" data-date="'+DAY+'" style="font-size:11px;padding:3px 8px;border:1.5px solid '+bc+';color:'+bc+';background:'+bbg+';border-radius:5px;cursor:pointer;font-weight:700">⏰ มาสาย</button>'
+              + '<button data-action="markHalf" data-htype="sick_half" data-id="'+r.id+'" data-nick="'+r.nick+'" data-dept="'+r.dept+'" data-date="'+DAY+'" style="font-size:10px;padding:2px 6px;border:1px solid #9b59b6;color:#6d28d9;background:#ede9fe;border-radius:4px;cursor:pointer">ป่วย½</button>'
+              + '<button data-action="markHalf" data-htype="biz_half" data-id="'+r.id+'" data-nick="'+r.nick+'" data-dept="'+r.dept+'" data-date="'+DAY+'" style="font-size:10px;padding:2px 6px;border:1px solid #e67e22;color:#b45309;background:#fef3c7;border-radius:4px;cursor:pointer">กิจ½</button>'
+              + '<button data-action="markHalf" data-htype="vac_half" data-id="'+r.id+'" data-nick="'+r.nick+'" data-dept="'+r.dept+'" data-date="'+DAY+'" style="font-size:10px;padding:2px 6px;border:1px solid #2ecc71;color:#15803d;background:#dcfce7;border-radius:4px;cursor:pointer">พักร้อน½</button>'
+              + '</div>'
+              + '</div>';
+          }).join('')
+        + '</div>'
+      : '';
+
+    return lvHtml + cameHtml;
+  })();
+
+  // event delegation สำหรับปุ่มมาสาย/ยกเลิก
+  (function(){
+    var el = document.getElementById('leaveList');
+    el.onclick = null;
+    el.addEventListener('click', function(e){
+      var btn = e.target.closest('[data-action]');
+      if (!btn) return;
+      var act  = btn.getAttribute('data-action');
+      var id   = btn.getAttribute('data-id');
+      var nick = btn.getAttribute('data-nick');
+      var dept = btn.getAttribute('data-dept');
+      var date = btn.getAttribute('data-date');
+      if (act === 'markLate')   markLate(id, nick, dept, date);
+      if (act === 'unmarkLate') unmarkLate(id, nick, dept, date);
+      if (act === 'markHalf') {
+        var htype = btn.getAttribute('data-htype');
+        markHalfLeave(id, nick, dept, date, htype);
+      }
+    });
+  })();
+
+  // donut
+  var sickAll=cntT(rs,'sick')+cntT(rs,'sick_half'), bizAll=cntT(rs,'biz')+cntT(rs,'biz_half'), vacAll=cntT(rs,'vac')+cntT(rs,'vac_half');
+  mkC('cDayDonut',{type:'doughnut',data:{labels:['มาทำงาน','ลาป่วย','ลากิจ','ลาพักร้อน','อื่นๆ'],datasets:[{data:[came,sickAll,bizAll,vacAll,off],backgroundColor:['#5b9bd5','#9b59b6','#e67e22','#2ecc71','#95a5a6'],borderWidth:2,borderColor:'#fffbe6'}]},options:{responsive:true,maintainAspectRatio:false,cutout:'60%',plugins:{legend:{position:'right',labels:{font:{size:11},boxWidth:12,padding:6}},tooltip:{callbacks:{label:function(c){return ' '+c.label+': '+c.raw+' คน ('+Math.round(c.raw/(tot||1)*100)+'%)'}}}}},});
+
+  // dept table
+  var depts={};rs.forEach(function(r){if(!depts[r.dept])depts[r.dept]={t:0,c:0,l:0};depts[r.dept].t++;if(r.type==='came')depts[r.dept].c++;else depts[r.dept].l++;});
+  var hdr='<tr><th>แผนก</th><th>ทั้งหมด</th><th>มาทำงาน</th><th>ลา/หยุด</th><th>% มา</th></tr>';
+  var trs=Object.entries(depts).sort(function(a,b){return b[1].t-a[1].t}).map(function(e){var k=e[0],v=e[1],p=v.t?Math.round(v.c/v.t*100):0,pc=p>=90?'#155724':p>=80?'#856404':'#721c24',pb=p>=90?'#d4edda':p>=80?'#fff3cd':'#f8d7da';return'<tr><td style="text-align:left;font-weight:700">'+k+'</td><td>'+v.t+'</td><td style="color:#15803d;font-weight:700">'+v.c+'</td><td style="color:#b91c1c">'+v.l+'</td><td><span style="background:'+pb+';color:'+pc+';padding:2px 8px;border-radius:4px;font-size:11px;font-weight:700">'+p+'%</span></td></tr>';}).join('');
+  document.getElementById('dayDeptTbl').innerHTML=hdr+trs;
+}
+
+document.getElementById('dayMonSel').addEventListener('change',function(){MON=this.value;var ds=datesOf(MON);DAY=ds[ds.length-1]||'';var dOpts=ds.map(function(d){return'<option value="'+d+'"'+(d===DAY?' selected':'')+'>'+fDt(d)+'</option>';}).join('');document.getElementById('daySelect').innerHTML=dOpts;renderDaily();});
+document.getElementById('daySelect').addEventListener('change',function(){DAY=this.value;renderDaily();});
+document.getElementById('btnPrev').addEventListener('click',function(){var ds=datesOf(MON),i=ds.indexOf(DAY);if(i>0){DAY=ds[i-1];document.getElementById('daySelect').value=DAY;renderDaily();}});
+document.getElementById('btnNext').addEventListener('click',function(){var ds=datesOf(MON),i=ds.indexOf(DAY);if(i<ds.length-1){DAY=ds[i+1];document.getElementById('daySelect').value=DAY;renderDaily();}});
+
+// ═══════════════════════════════════════════════════════════
+// PAGE: รายทีม
+// ═══════════════════════════════════════════════════════════
+var TEAM_COLORS=['#5b9bd5','#e67e22','#2ecc71','#9b59b6','#e74c3c','#1abc9c','#f39c12','#3498db'];
+function renderTeam() {
+  var mk=document.getElementById('tmMonSel').value||MON;
+  var view=document.getElementById('tmViewSel').value;
+  var teamFilter=document.getElementById('tmTeamSel').value;
+  var rs=[];
+  if(view==='day'){var ld=datesOf(mk).slice(-1)[0]||'';rs=ld?rowsOf(mk,ld):[];}
+  else if(view==='week'){var ds=datesOf(mk),lastWk=ds.length?getWeekNum(ds[ds.length-1]):1;ds.forEach(function(d){if(getWeekNum(d)===lastWk)rs=rs.concat(rowsOf(mk,d));});}
+  else{rs=allR(mk);}
+
+  var depts=[];rs.forEach(function(r){if(depts.indexOf(r.dept)<0)depts.push(r.dept);});depts.sort();
+
+  // populate team filter
+  var tSel=document.getElementById('tmTeamSel');
+  var curTeam=tSel.value;
+  tSel.innerHTML='<option value="">ทุกทีม</option>'+depts.map(function(d){return'<option value="'+d+'"'+(d===curTeam?' selected':'')+'>'+d+'</option>';}).join('');
+
+  var filtDepts = teamFilter ? depts.filter(function(d){return d===teamFilter}) : depts;
+
+  // cards
+  document.getElementById('teamCards').innerHTML=filtDepts.map(function(dept,i){
+    var dr=rs.filter(function(r){return r.dept===dept});
+    var came=cntT(dr,'came'),sick=cntT(dr,'sick'),biz=cntT(dr,'biz'),vac=cntT(dr,'vac'),tot=dr.length;
+    var leave=sick+biz+vac,pct=tot?Math.round(came/tot*100):0,col=TEAM_COLORS[i%TEAM_COLORS.length];
+    return'<div class="gold-card" style="margin:0"><div style="background:'+col+';color:#fff;text-align:center;padding:8px;font-weight:700;font-size:13px">'+dept+'</div><div style="padding:10px;text-align:center"><div style="font-size:26px;font-weight:700;color:'+col+'">'+pct+'%</div><div style="font-size:10px;color:#7a6000;margin-bottom:6px">% มาทำงาน</div><div style="font-size:12px">รวม '+tot+' รายการ</div><div style="font-size:12px;color:#b91c1c">ลา '+leave+' ครั้ง</div><div style="font-size:11px;color:#7a6000">ป่วย '+sick+' · กิจ '+biz+' · พักร้อน '+vac+'</div></div></div>';
+  }).join('');
+
+  // table
+  var hdr='<tr><th>ทีม</th><th>รวม</th><th>มา</th><th>ลาป่วย</th><th>ลากิจ</th><th>ลาพักร้อน</th><th>หยุด</th><th>รวมลา</th><th>% มา</th></tr>';
+  var barLbl=[],bSick=[],bBiz=[],bVac=[];
+  var trs=filtDepts.map(function(dept){
+    var dr=rs.filter(function(r){return r.dept===dept});
+    var came=cntT(dr,'came'),sick=cntT(dr,'sick'),biz=cntT(dr,'biz'),vac=cntT(dr,'vac'),off=cntT(dr,'off'),tot=dr.length,leave=sick+biz+vac;
+    var pct=tot?Math.round(came/tot*100):0,pc=pct>=90?'#155724':pct>=80?'#856404':'#721c24',pb=pct>=90?'#d4edda':pct>=80?'#fff3cd':'#f8d7da';
+    barLbl.push(dept);bSick.push(sick);bBiz.push(biz);bVac.push(vac);
+    return'<tr><td style="text-align:left;font-weight:700">'+dept+'</td><td>'+tot+'</td><td style="color:#15803d;font-weight:700">'+came+'</td><td style="color:#9b59b6">'+sick+'</td><td style="color:#e67e22">'+biz+'</td><td style="color:#2ecc71">'+vac+'</td><td>'+off+'</td><td style="color:#b91c1c;font-weight:700">'+leave+'</td><td><span style="background:'+pb+';color:'+pc+';padding:2px 7px;border-radius:4px;font-size:11px;font-weight:700">'+pct+'%</span></td></tr>';
+  }).join('');
+  document.getElementById('teamTbl').innerHTML=hdr+trs;
+
+  // bar chart
+  mkC('cTeamBar',{type:'bar',data:{labels:barLbl,datasets:[{label:'ลาป่วย',data:bSick,backgroundColor:'#9b59b6'},{label:'ลากิจ',data:bBiz,backgroundColor:'#e67e22'},{label:'ลาพักร้อน',data:bVac,backgroundColor:'#2ecc71'}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'bottom',labels:{font:{size:11},boxWidth:12,padding:8}}},scales:{x:{stacked:true,grid:{display:false},ticks:{font:{size:11},color:'#7a6000'}},y:{stacked:true,grid:{color:'rgba(180,140,0,0.1)'},ticks:{font:{size:11},color:'#7a6000',stepSize:1},beginAtZero:true}}}});
+
+  // person table
+  var tFilter=document.getElementById('tmTeamSel').value;
+  var prs=tFilter?rs.filter(function(r){return r.dept===tFilter}):rs;
+  var pmap={};
+  prs.forEach(function(r){if(!pmap[r.id])pmap[r.id]={nick:r.nick,name:r.name,dept:r.dept,came:0,sick:0,biz:0,vac:0,off:0,total:0};pmap[r.id][r.type]=(pmap[r.id][r.type]||0)+1;pmap[r.id].total++;});
+  var phdr='<tr><th>ชื่อเล่น</th><th>ชื่อ</th><th>ทีม</th><th>มา</th><th>ลาป่วย</th><th>ลากิจ</th><th>ลาพักร้อน</th><th>รวมลา</th></tr>';
+  var ptrs=Object.values(pmap).sort(function(a,b){return(b.sick+b.biz+b.vac)-(a.sick+a.biz+a.vac)}).map(function(p){
+    var leave=p.sick+p.biz+p.vac;
+    return'<tr><td style="font-weight:700">'+p.nick+'</td><td style="text-align:left">'+p.name+'</td><td>'+p.dept+'</td><td style="color:#15803d">'+p.came+'</td><td style="color:#9b59b6">'+p.sick+'</td><td style="color:#e67e22">'+p.biz+'</td><td style="color:#2ecc71">'+p.vac+'</td><td style="color:#b91c1c;font-weight:700">'+leave+'</td></tr>';
+  }).join('');
+  document.getElementById('teamPersonTbl').innerHTML=phdr+ptrs||'<tr><td colspan="8" class="empty">ยังไม่มีข้อมูล</td></tr>';
+}
+['tmMonSel','tmViewSel','tmTeamSel'].forEach(function(id){document.getElementById(id).addEventListener('change',renderTeam);});
+
+// ═══════════════════════════════════════════════════════════
+// PAGE: รายสัปดาห์
+// ═══════════════════════════════════════════════════════════
+function renderWeekly() {
+  var mk=document.getElementById('wkMonSel').value||MON;
+  var ds=datesOf(mk);
+  if(!ds.length){document.getElementById('wkTbl').innerHTML='<tr><td class="empty">ยังไม่มีข้อมูล</td></tr>';return;}
+  var weeks={};
+  ds.forEach(function(d){var w=getWeekNum(d);if(!weeks[w])weeks[w]=[];weeks[w].push(d);});
+  var hdr='<tr><th>สัปดาห์ที่</th><th>ช่วงวันที่</th><th>จน.คน</th><th>มาทำงาน</th><th>ลาป่วย</th><th>ลากิจ</th><th>ลาพักร้อน</th><th>วันหยุด</th><th>รวมลา</th></tr>';
+  var trs=Object.keys(weeks).sort(function(a,b){return a-b}).map(function(wk,i){
+    var wd=weeks[wk],ar=wd.reduce(function(a,d){return a.concat(rowsOf(mk,d));},[]); 
+    var came=cntT(ar,'came'),sick=cntT(ar,'sick'),biz=cntT(ar,'biz'),vac=cntT(ar,'vac'),off=cntT(ar,'off'),leave=sick+biz+vac;
+    var r1=fDt(wd[0]),r2=wd.length>1?fDt(wd[wd.length-1]):'';
+    var range=parseInt(r1.match(/ที่ (\d+)/)[1])+(r2?' – '+parseInt(r2.match(/ที่ (\d+)/)[1]):'');
+    return'<tr><td>สัปดาห์ที่ '+(i+1)+'</td><td>'+range+' '+MONL[parseInt(mk.split('-')[1])]+'</td><td>'+ar.length+'</td><td style="color:#15803d;font-weight:700">'+came+'</td><td style="color:#9b59b6">'+sick+'</td><td style="color:#e67e22">'+biz+'</td><td style="color:#2ecc71">'+vac+'</td><td>'+off+'</td><td style="color:#b91c1c;font-weight:700">'+leave+'</td></tr>';
+  }).join('');
+  document.getElementById('wkTbl').innerHTML=hdr+trs;
+  // line chart
+  mkC('cWkLine',{type:'line',data:{labels:ds.map(function(d){return parseInt(d.split('-')[2])+''}),datasets:[{label:'ลาป่วย',data:ds.map(function(d){return cntT(rowsOf(mk,d),'sick')}),borderColor:'#9b59b6',backgroundColor:'rgba(155,89,182,.1)',tension:.4,pointRadius:3,borderWidth:2},{label:'ลากิจ',data:ds.map(function(d){return cntT(rowsOf(mk,d),'biz')}),borderColor:'#e67e22',backgroundColor:'rgba(230,126,34,.1)',tension:.4,pointRadius:3,borderWidth:2},{label:'ลาพักร้อน',data:ds.map(function(d){return cntT(rowsOf(mk,d),'vac')}),borderColor:'#2ecc71',backgroundColor:'rgba(46,204,113,.1)',tension:.4,pointRadius:3,borderWidth:2}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'bottom',labels:{font:{size:11},boxWidth:12,padding:8}}},scales:{x:{grid:{display:false},ticks:{font:{size:10},color:'#7a6000',autoSkip:false,maxRotation:0}},y:{grid:{color:'rgba(180,140,0,0.1)'},ticks:{font:{size:10},color:'#7a6000',stepSize:1},beginAtZero:true}}}});
+}
+document.getElementById('wkMonSel').addEventListener('change',renderWeekly);
+
+// ═══════════════════════════════════════════════════════════
+// PAGE: รายเดือน
+// ═══════════════════════════════════════════════════════════
+function renderMonthly() {
+  var ms=allMons();
+  if(!ms.length){document.getElementById('monTbl').innerHTML='<tr><td class="empty">ยังไม่มีข้อมูล</td></tr>';return;}
+  var hdr='<tr><th>เดือน</th><th>จน.พนักงาน</th><th>มา(ครั้ง)</th><th>ลาป่วย</th><th>ลากิจ</th><th>ลาพักร้อน</th><th>วันหยุด</th><th>รวมลา</th><th>% มา</th></tr>';
+  var bLbl=[],bSick=[],bBiz=[],bVac=[];
+  var trs=ms.map(function(mk,i){
+    var ar=allR(mk),uniq={};ar.forEach(function(r){uniq[r.id]=1});
+    var tot=Object.keys(uniq).length,came=cntT(ar,'came'),sick=cntT(ar,'sick'),biz=cntT(ar,'biz'),vac=cntT(ar,'vac'),off=cntT(ar,'off'),leave=sick+biz+vac;
+    var days=datesOf(mk).length,pct=days&&tot?Math.round(came/(days*tot)*100):0;
+    var pc=pct>=90?'#155724':pct>=80?'#856404':'#721c24',pb=pct>=90?'#d4edda':pct>=80?'#fff3cd':'#f8d7da';
+    bLbl.push(mLab(mk));bSick.push(sick);bBiz.push(biz);bVac.push(vac);
+    return'<tr><td style="font-weight:700">'+mLab(mk)+'</td><td>'+tot+'</td><td style="color:#15803d">'+came+'</td><td style="color:#9b59b6">'+sick+'</td><td style="color:#e67e22">'+biz+'</td><td style="color:#2ecc71">'+vac+'</td><td>'+off+'</td><td style="color:#b91c1c;font-weight:700">'+leave+'</td><td><span style="background:'+pb+';color:'+pc+';padding:2px 7px;border-radius:4px;font-size:11px;font-weight:700">'+pct+'%</span></td></tr>';
+  }).join('');
+  document.getElementById('monTbl').innerHTML=hdr+trs;
+  mkC('cMonBar',{type:'bar',data:{labels:bLbl,datasets:[{label:'ลาป่วย',data:bSick,backgroundColor:'#9b59b6'},{label:'ลากิจ',data:bBiz,backgroundColor:'#e67e22'},{label:'ลาพักร้อน',data:bVac,backgroundColor:'#2ecc71'}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'bottom',labels:{font:{size:11},boxWidth:12,padding:8}}},scales:{x:{stacked:true,grid:{display:false},ticks:{font:{size:11},color:'#7a6000'}},y:{stacked:true,grid:{color:'rgba(180,140,0,0.1)'},ticks:{font:{size:11},color:'#7a6000',stepSize:1},beginAtZero:true}}}});
+  // top persons
+  var allRs=allRAll(),pmap={};
+  allRs.forEach(function(r){if(!pmap[r.id])pmap[r.id]={nick:r.nick,name:r.name,dept:r.dept,sick:0,biz:0,vac:0,late:0};if(r.type==='sick')pmap[r.id].sick++;else if(r.type==='biz')pmap[r.id].biz++;else if(r.type==='vac')pmap[r.id].vac++;else if(r.type==='late')pmap[r.id].late++;});
+  var tops=Object.values(pmap).sort(function(a,b){return(b.sick+b.biz+b.vac)-(a.sick+a.biz+a.vac)}).slice(0,10);
+  var thdr='<tr><th>อันดับ</th><th>ชื่อเล่น</th><th>ชื่อ</th><th>ทีม</th><th>มาสาย</th><th>ลาป่วย</th><th>ลากิจ</th><th>ลาพักร้อน</th><th>รวมลา</th></tr>';
+  var ttrs=tops.map(function(p,i){var l=Math.round((p.sick+p.biz+p.vac)*10)/10;var lf=p.late>=LATE_QUOTA?'🔴':p.late>0?'🟡':'';return'<tr><td style="font-weight:700">'+(i+1)+'</td><td style="font-weight:700">'+p.nick+'</td><td style="text-align:left">'+p.name+'</td><td>'+p.dept+'</td><td style="color:#92400e;font-weight:700">'+p.late+' '+lf+'</td><td style="color:#9b59b6">'+p.sick+'</td><td style="color:#e67e22">'+p.biz+'</td><td style="color:#2ecc71">'+p.vac+'</td><td style="color:#b91c1c;font-weight:700">'+l+'</td></tr>';}).join('');
+  document.getElementById('monTopTbl').innerHTML=thdr+ttrs;
+}
+
+// ═══════════════════════════════════════════════════════════
+// PAGE: ภาพรวมปี
+// ═══════════════════════════════════════════════════════════
+function renderYearly() {
+  var allRs=allRAll();
+  var uniq={};allRs.forEach(function(r){uniq[r.id]=1});
+  var emp=Object.keys(uniq).length;
+  var sick=cntT(allRs,'sick'),biz=cntT(allRs,'biz'),vac=cntT(allRs,'vac'),off=cntT(allRs,'off'),came=cntT(allRs,'came');
+  document.getElementById('yEmp').textContent=emp||'—';
+  document.getElementById('ySick').textContent=sick;
+  document.getElementById('yBiz').textContent=biz;
+  document.getElementById('yVac').textContent=vac;
+  document.getElementById('yOff').textContent=off;
+  document.getElementById('yCame').textContent=came;
+
+  // donut
+  mkC('cYearDonut',{type:'doughnut',data:{labels:['มาทำงาน '+came,'ลาป่วย '+sick,'ลากิจ '+biz,'ลาพักร้อน '+vac,'วันหยุด '+off],datasets:[{data:[came,sick,biz,vac,off],backgroundColor:['#5b9bd5','#9b59b6','#e67e22','#2ecc71','#95a5a6'],borderWidth:2,borderColor:'#fffbe6'}]},options:{responsive:true,maintainAspectRatio:false,cutout:'55%',plugins:{legend:{position:'right',labels:{font:{size:11},boxWidth:12,padding:6}}}}});
+
+  // line by month
+  var ms=allMons();
+  mkC('cYearLine',{type:'line',data:{labels:ms.map(mLab),datasets:[{label:'ลาป่วย',data:ms.map(function(mk){return cntT(allR(mk),'sick')}),borderColor:'#9b59b6',tension:.4,pointRadius:4,borderWidth:2},{label:'ลากิจ',data:ms.map(function(mk){return cntT(allR(mk),'biz')}),borderColor:'#e67e22',tension:.4,pointRadius:4,borderWidth:2},{label:'ลาพักร้อน',data:ms.map(function(mk){return cntT(allR(mk),'vac')}),borderColor:'#2ecc71',tension:.4,pointRadius:4,borderWidth:2}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'bottom',labels:{font:{size:11},boxWidth:12,padding:8}}},scales:{x:{grid:{display:false},ticks:{font:{size:10},color:'#7a6000'}},y:{grid:{color:'rgba(180,140,0,0.1)'},ticks:{font:{size:10},color:'#7a6000',stepSize:1},beginAtZero:true}}}});
+
+  // populate team filter
+  var depts=[];allRs.forEach(function(r){if(depts.indexOf(r.dept)<0)depts.push(r.dept);});depts.sort();
+  var ySel=document.getElementById('yTeamFilter');
+  var cur=ySel.value;
+  ySel.innerHTML='<option value="">ทุกทีม</option>'+depts.map(function(d){return'<option value="'+d+'"'+(d===cur?' selected':'')+'>'+d+'</option>';}).join('');
+
+  renderYearPersonTable();
+}
+
+function renderYearPersonTable() {
+  var allRs=allRAll();
+  var teamF=document.getElementById('yTeamFilter').value;
+  var sortF=document.getElementById('ySortSel').value;
+  if(teamF) allRs=allRs.filter(function(r){return r.dept===teamF});
+
+  var pmap={};
+  allRs.forEach(function(r){
+    if(!pmap[r.id])pmap[r.id]={nick:r.nick,name:r.name,dept:r.dept,came:0,sick:0,biz:0,vac:0,off:0,late:0,absent:0};
+    if(r.type==='came')pmap[r.id].came++;
+    else if(r.type==='sick')pmap[r.id].sick++;
+    else if(r.type==='sick_half')pmap[r.id].sick+=0.5;
+    else if(r.type==='biz')pmap[r.id].biz++;
+    else if(r.type==='biz_half')pmap[r.id].biz+=0.5;
+    else if(r.type==='vac')pmap[r.id].vac++;
+    else if(r.type==='vac_half')pmap[r.id].vac+=0.5;
+    else if(r.type==='off')pmap[r.id].off++;
+    else if(r.type==='late')pmap[r.id].late++;
+    else if(r.type==='nodata')pmap[r.id].absent++;
+  });
+
+  var sorted=Object.values(pmap).sort(function(a,b){
+    if(sortF==='sick')return b.sick-a.sick;
+    if(sortF==='biz')return b.biz-a.biz;
+    if(sortF==='vac')return b.vac-a.vac;
+    return(b.sick+b.biz+b.vac+b.absent)-(a.sick+a.biz+a.vac+a.absent);
+  });
+
+  var hdr='<tr><th>ชื่อเล่น</th><th>ชื่อ</th><th>ทีม</th><th>มาทำงาน</th><th>มาสาย</th><th>ลาป่วย</th><th>ลากิจ</th><th>ลาพักร้อน</th><th>วันหยุด</th><th>ขาด</th><th>รวมลา</th></tr>';
+  var trs=sorted.map(function(p){
+    var total=Math.round((p.sick+p.biz+p.vac+p.absent)*10)/10;
+    var flag=total>=5?'🔴':total>=3?'🟡':'';
+    var lateFlag=p.late>=LATE_QUOTA?'🔴':p.late>0?'🟡':'';
+    return'<tr><td style="font-weight:700">'+p.nick+'</td><td style="text-align:left">'+p.name+'</td><td>'+p.dept+'</td><td style="color:#15803d">'+p.came+'</td><td style="color:#92400e;font-weight:700">'+p.late+' '+lateFlag+'</td><td style="color:#9b59b6">'+fmtLeave(p.sick)+'</td><td style="color:#e67e22">'+fmtLeave(p.biz)+'</td><td style="color:#2ecc71">'+fmtLeave(p.vac)+'</td><td>'+p.off+'</td><td style="color:#b91c1c">'+p.absent+'</td><td style="color:#b91c1c;font-weight:700">'+total+' '+flag+'</td></tr>';
+  }).join('');
+  document.getElementById('yearPersonTbl').innerHTML=hdr+(trs||'<tr><td colspan="10" class="empty">ยังไม่มีข้อมูล</td></tr>');
+}
+document.getElementById('yTeamFilter').addEventListener('change',function(){renderYearPersonTable();});
+document.getElementById('ySortSel').addEventListener('change',function(){renderYearPersonTable();});
+
+// ═══════════════════════════════════════════════════════════
+// DATA STATUS
+// ═══════════════════════════════════════════════════════════
+function renderDataStatus() {
+  var ms=allMons();
+  if(!ms.length){document.getElementById('dataStatus').innerHTML='<div class="empty">ยังไม่มีข้อมูล</div>';return;}
+  var rows=ms.map(function(mk){var ar=allR(mk),ds=datesOf(mk);return'<tr><td style="font-weight:700">'+mLab(mk)+'</td><td>'+ds.length+' วัน</td><td>'+ar.length+' รายการ</td><td>'+uniqIds(ar)+' คน</td></tr>';}).join('');
+  document.getElementById('dataStatus').innerHTML='<table class="htbl"><tr><th>เดือน</th><th>จน.วัน</th><th>จน.รายการ</th><th>จน.พนักงาน</th></tr>'+rows+'</table>';
+}
+
+// ═══════════════════════════════════════════════════════════
+// INIT
+// ═══════════════════════════════════════════════════════════
+// โหลดจาก IndexedDB ก่อน (async)
+setSyncStatus('ld','⏳ กำลังโหลดข้อมูล...');
+loadLocal(function(hasLocal) {
+  if (hasLocal) {
+    setSyncStatus('ok','💾 โหลดจาก browser ('+Object.keys(DB).length+' เดือน)');
+    refreshAll();
+  } else {
+    setSyncStatus('ld','💾 ยังไม่มีข้อมูล — กรุณา paste ข้อมูล หรือกด โหลดตัวอย่าง');
+  }
+
+  // ถ้ามี Google Sheets URL ให้ sync เพิ่ม
+  if (SCRIPT_URL) {
+    loadFromServer(function(){
+      saveLocal();
+      refreshAll();
+    });
+  }
+});
+</script>
+</body>
+</html>
