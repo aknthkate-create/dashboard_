@@ -81,6 +81,11 @@ select{padding:4px 8px;border-radius:5px;border:1.5px solid #c8a800;background:#
 </head>
 <body>
 
+<div id="loadingOverlay" style="display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(255,251,230,0.92);z-index:9999;display:flex;align-items:center;justify-content:center;flex-direction:column;gap:12px">
+  <div style="font-size:28px">⏳</div>
+  <div style="font-size:16px;font-weight:700;color:#5a3e00">กำลังโหลดข้อมูลจาก Google Sheets...</div>
+  <div style="font-size:13px;color:#7a6000">กรุณารอสักครู่ค่ะ</div>
+</div>
 <div class="topbar">
   <h1>แดชบอร์ดการเข้างาน — AKANE</h1>
   <span class="sync-status" id="syncStatus">⚡ โหมดชั่วคราว</span>
@@ -356,8 +361,19 @@ var LS_KEY = 'hr_akane_v3';
 
 function saveLocal() {
   try {
-    localStorage.setItem(LS_KEY, JSON.stringify(DB));
+    var data = JSON.stringify(DB);
+    localStorage.setItem(LS_KEY, data);
+    // verify it was actually saved
+    var check = localStorage.getItem(LS_KEY);
+    if (check) {
+      var months = Object.keys(DB).length;
+      var rows = allRAll().length;
+      setSyncStatus('ok', '✅ บันทึกแล้ว (' + months + ' เดือน ' + rows + ' รายการ)');
+    } else {
+      setSyncStatus('er', '❌ บันทึกไม่สำเร็จ');
+    }
   } catch(e) {
+    setSyncStatus('er', '❌ บันทึกไม่ได้: ' + e.message);
     console.warn('saveLocal error:', e);
   }
 }
@@ -395,16 +411,25 @@ function clearLocal() {
 function loadFromServer(cb) {
   if (!SCRIPT_URL) { cb && cb(); return; }
   setSyncStatus('ld','⏳ กำลังโหลดข้อมูล...');
+  var overlay = document.getElementById('loadingOverlay');
+  if (overlay) overlay.style.display = 'flex';
   fetch(SCRIPT_URL+'?action=getAllData')
     .then(function(r){return r.json()})
     .then(function(data){
+      var overlay = document.getElementById('loadingOverlay');
+      if (overlay) overlay.style.display = 'none';
       if(data.ok && data.rows) {
         DB = {};
         data.rows.forEach(function(r){ if(r.date) addRec(r.id,r.name,r.nick,r.dept,r.date,r.status); });
-        setSyncStatus('ok','✅ ซิงค์กับ Google Sheets แล้ว');
+        setSyncStatus('ok','✅ โหลดจาก Google Sheets แล้ว ('+data.rows.length+' รายการ)');
         cb && cb();
       }
-    }).catch(function(){ setSyncStatus('er','❌ เชื่อมต่อ Google Sheets ไม่ได้'); cb && cb(); });
+    }).catch(function(){
+      var overlay = document.getElementById('loadingOverlay');
+      if (overlay) overlay.style.display = 'none';
+      setSyncStatus('er','❌ เชื่อมต่อ Google Sheets ไม่ได้');
+      cb && cb();
+    });
 }
 
 function saveToServer(rows, cb) {
@@ -983,24 +1008,25 @@ function renderDataStatus() {
 // ═══════════════════════════════════════════════════════════
 // INIT
 // ═══════════════════════════════════════════════════════════
-// โหลดจาก IndexedDB ก่อน (async)
 setSyncStatus('ld','⏳ กำลังโหลดข้อมูล...');
-loadLocal(function(hasLocal) {
-  if (hasLocal) {
-    setSyncStatus('ok','💾 โหลดจาก browser ('+Object.keys(DB).length+' เดือน)');
-    refreshAll();
-  } else {
-    setSyncStatus('ld','💾 ยังไม่มีข้อมูล — กรุณา paste ข้อมูล หรือกด โหลดตัวอย่าง');
-  }
 
-  // ถ้ามี Google Sheets URL ให้ sync เพิ่ม
-  if (SCRIPT_URL) {
-    loadFromServer(function(){
-      saveLocal();
+if (SCRIPT_URL) {
+  // มี Google Sheets URL → โหลดจาก Sheets เป็นหลัก
+  loadFromServer(function() {
+    saveLocal(); // cache ไว้ใน localStorage ด้วย
+    refreshAll();
+  });
+} else {
+  // ไม่มี Sheets → โหลดจาก localStorage
+  loadLocal(function(hasLocal) {
+    if (hasLocal) {
+      setSyncStatus('ok','✅ โหลดจาก browser (' + Object.keys(DB).length + ' เดือน)');
       refreshAll();
-    });
-  }
-});
+    } else {
+      setSyncStatus('ld','💾 ยังไม่มีข้อมูล — กรุณา paste ข้อมูล หรือกด โหลดตัวอย่าง');
+    }
+  });
+}
 </script>
 </body>
 </html>
