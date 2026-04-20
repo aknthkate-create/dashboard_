@@ -351,72 +351,45 @@ function addRec(id,name,nick,dept,date,status){
   if(found)Object.assign(found,obj);else DB[mk][date].push(obj);
 }
 
-// ── IndexedDB: บันทึก/โหลด DB (ทำงานได้ทั้ง file:// และ http://) ──
-var IDB_NAME = 'hr_akane', IDB_STORE = 'db_store', IDB_KEY = 'main';
-var idb = null;
-
-function openIDB(cb) {
-  if (idb) { cb(idb); return; }
-  var req = indexedDB.open(IDB_NAME, 1);
-  req.onupgradeneeded = function(e) {
-    e.target.result.createObjectStore(IDB_STORE);
-  };
-  req.onsuccess = function(e) { idb = e.target.result; cb(idb); };
-  req.onerror   = function()  { cb(null); };
-}
+// ── localStorage: บันทึก/โหลดข้อมูล (sync, ทำงานได้บน https://) ──
+var LS_KEY = 'hr_akane_v3';
 
 function saveLocal() {
-  openIDB(function(db) {
-    if (!db) return;
-    try {
-      var tx = db.transaction(IDB_STORE, 'readwrite');
-      tx.objectStore(IDB_STORE).put(JSON.stringify(DB), IDB_KEY);
-    } catch(e) {}
-  });
+  try {
+    localStorage.setItem(LS_KEY, JSON.stringify(DB));
+  } catch(e) {
+    console.warn('saveLocal error:', e);
+  }
 }
 
 function loadLocal(cb) {
-  openIDB(function(db) {
-    if (!db) { cb(false); return; }
-    try {
-      var tx  = db.transaction(IDB_STORE, 'readonly');
-      var req = tx.objectStore(IDB_STORE).get(IDB_KEY);
-      req.onsuccess = function(e) {
-        var saved = e.target.result;
-        if (!saved) { cb(false); return; }
-        try {
-          var parsed = JSON.parse(saved);
-          var valid  = {};
-          var mRe = /^\d{4}-\d{2}$/, dRe = /^\d{4}-\d{2}-\d{2}$/;
-          Object.keys(parsed).forEach(function(mk) {
-            if (!mRe.test(mk)) return;
-            valid[mk] = {};
-            Object.keys(parsed[mk]).forEach(function(d) {
-              if (!dRe.test(d)) return;
-              var rows = (parsed[mk][d] || []).filter(function(r) {
-                return r && r.id && r.date && dRe.test(r.date);
-              });
-              if (rows.length) valid[mk][d] = rows;
-            });
-            if (!Object.keys(valid[mk]).length) delete valid[mk];
-          });
-          if (Object.keys(valid).length) { DB = valid; cb(true); }
-          else cb(false);
-        } catch(ex) { cb(false); }
-      };
-      req.onerror = function() { cb(false); };
-    } catch(e) { cb(false); }
-  });
+  try {
+    var saved = localStorage.getItem(LS_KEY);
+    if (!saved) { cb(false); return; }
+    var parsed = JSON.parse(saved);
+    var valid  = {}, mRe = /^\d{4}-\d{2}$/, dRe = /^\d{4}-\d{2}-\d{2}$/;
+    Object.keys(parsed).forEach(function(mk) {
+      if (!mRe.test(mk)) return;
+      valid[mk] = {};
+      Object.keys(parsed[mk]).forEach(function(d) {
+        if (!dRe.test(d)) return;
+        var rows = (parsed[mk][d] || []).filter(function(r) {
+          return r && r.id && r.date && dRe.test(r.date);
+        });
+        if (rows.length) valid[mk][d] = rows;
+      });
+      if (!Object.keys(valid[mk]).length) delete valid[mk];
+    });
+    if (Object.keys(valid).length) { DB = valid; cb(true); }
+    else cb(false);
+  } catch(e) {
+    console.warn('loadLocal error:', e);
+    cb(false);
+  }
 }
 
 function clearLocal() {
-  openIDB(function(db) {
-    if (!db) return;
-    try {
-      var tx = db.transaction(IDB_STORE, 'readwrite');
-      tx.objectStore(IDB_STORE).delete(IDB_KEY);
-    } catch(e) {}
-  });
+  try { localStorage.removeItem(LS_KEY); } catch(e) {}
 }
 
 function loadFromServer(cb) {
