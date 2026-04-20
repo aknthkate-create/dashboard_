@@ -434,14 +434,20 @@ function loadFromServer(cb) {
 
 function saveToServer(rows, cb) {
   if (!SCRIPT_URL) { cb && cb(); return; }
-  setSyncStatus('ld','⏳ กำลังบันทึกข้อมูล...');
-  fetch(SCRIPT_URL, { method:'POST', body: JSON.stringify({action:'saveRows', rows:rows}) })
-    .then(function(r){return r.json()})
+  if (!rows || !rows.length) { cb && cb(); return; }
+  setSyncStatus('ld','⏳ กำลังบันทึก...');
+  var encoded = encodeURIComponent(JSON.stringify(rows));
+  var url = SCRIPT_URL + '?action=saveRows&rows=' + encoded;
+  fetch(url)
+    .then(function(r){ return r.json(); })
     .then(function(data){
-      if(data.ok) setSyncStatus('ok','✅ บันทึกลง Google Sheets แล้ว');
-      else setSyncStatus('er','❌ บันทึกไม่สำเร็จ');
+      if(data.ok) setSyncStatus('ok','✅ บันทึกแล้ว ('+data.saved+' รายการ)');
+      else setSyncStatus('er','❌ บันทึกไม่ได้: '+(data.error||''));
       cb && cb();
-    }).catch(function(){ setSyncStatus('er','❌ บันทึกไม่สำเร็จ'); cb && cb(); });
+    }).catch(function(err){
+      setSyncStatus('er','❌ บันทึกไม่ได้: '+err.message);
+      cb && cb();
+    });
 }
 
 function setSyncStatus(type, msg) {
